@@ -1,79 +1,131 @@
 package FuryICO;
 import robocode.*;
 import robocode.util.Utils;
+import java.awt.Color;
 
 public class Fury extends AdvancedRobot {
-	private int robotCount = 0;
-	private boolean aggressiveMode = false;  // Variável para controlar a estratégia de ataque
+    private int robotCount = 0;
+    private boolean aggressiveMode = false;  // Variável para controlar a estratégia de ataque
+    private boolean defensiveMode = false; // Estratégia defensiva
+    private double moveAmount; // Quantidade de movimento
+    private boolean peek; // Controle para "escanear" a frente
 
-	public void run() {
-    	setAdjustGunForRobotTurn(true);  // Permite que a arma gire independentemente do corpo do robô
-    	setAdjustRadarForRobotTurn(true);  // Permite que o radar gire independentemente do corpo do robô
+    public void run() {
+        setBodyColor(Color.black);
+        setGunColor(Color.black);
+        setRadarColor(Color.orange);
+        setBulletColor(Color.cyan);
+        setScanColor(Color.cyan);
 
-    	while (true) {
-        	// Gire o radar para escanear a área, mas com rotação menor
-        	setTurnRadarRight(15);  // Gira o radar um pouco de cada vez
-        	execute();  // Executa as ações
-    	}
-	}
+        // Inicializa os parâmetros da estratégia defensiva
+        moveAmount = Math.max(getBattleFieldWidth(), getBattleFieldHeight());
+        peek = false;
 
-	public void onScannedRobot(ScannedRobotEvent e) {
-    	robotCount = getOthers(); // Atualiza o número de robôs restantes
+        while (true) {
+            robotCount = getOthers();  // Atualiza o número de robôs restantes
 
-    	double enemyBearing = getHeading() + e.getBearing(); // Direção absoluta do inimigo
-    	double enemyDistance = e.getDistance(); // Distância até o inimigo
-    	double myHeading = getHeading(); // Direção atual do robô
+            if (robotCount > 2) {
+                // Estratégia defensiva: mover paralelamente às paredes
+                defensiveMode = true;
+                moveParallelToWalls();
+            } else {
+                // Estratégia de ataque
+                defensiveMode = false;
+                aggressiveMode = true;
+                attackEnemies();
+            }
+            execute(); // Executa as ações
+        }
+    }
 
-    	// Verifica se o inimigo está muito próximo (<10)
-    	if (enemyDistance < 10) {
-        	aggressiveMode = true;  // Ativa o modo agressivo de ataque
-    	}
+    // Estratégia de movimento paralelamente às paredes
+    private void moveParallelToWalls() {
+        // Calcula a distância até a parede mais próxima
+        double safeDistance = 20;  // Distância mínima segura da parede (ajustável)
+        double x = getX();
+        double y = getY();
 
-    	if (aggressiveMode) {
-        	// Estratégia de ataque quando o inimigo está muito perto
-        	double turnToEnemy = Utils.normalRelativeAngleDegrees(enemyBearing - myHeading);
-        	setTurnRight(turnToEnemy);  // Gira o robô para alinhar com o inimigo
-        	setTurnGunRight(Utils.normalRelativeAngleDegrees(enemyBearing - getGunHeading()));  // Gira a arma para o inimigo
+        // Verifica se o robô está perto da borda esquerda ou direita
+        if (x < safeDistance) {
+            setTurnRight(90);  // Se está muito perto da borda esquerda, vira para a direita
+            setAhead(100);  // Move para frente, paralelamente à parede
+        } else if (x > getBattleFieldWidth() - safeDistance) {
+            setTurnLeft(90);  // Se está muito perto da borda direita, vira para a esquerda
+            setAhead(100);  // Move para frente, paralelamente à parede
+        }
+        
+        // Verifica se o robô está perto da borda superior ou inferior
+        else if (y < safeDistance) {
+            setTurnRight(90);  // Se está muito perto da borda superior, vira para a direita
+            setAhead(100);  // Move para frente, paralelamente à parede
+        } else if (y > getBattleFieldHeight() - safeDistance) {
+            setTurnLeft(90);  // Se está muito perto da borda inferior, vira para a esquerda
+            setAhead(100);  // Move para frente, paralelamente à parede
+        } else {
+            // Se não estiver perto de nenhuma parede, move-se ao longo de uma borda, como padrão
+            setTurnRight(90);
+            ahead(moveAmount);
+        }
+    }
 
-        	setAhead(enemyDistance - 5);  // Move para pressionar o inimigo (muito próximo)
+    // Estratégia de ataque
+    private void attackEnemies() {
+        // O radar só gira 30° para detectar os inimigos
+        setTurnRadarRight(30); // Radar variando entre 30°
+        
+        // A arma deve seguir o movimento do radar
+        setTurnGunRight(30); // Gira a arma no mesmo ângulo do radar
+        
+        execute();
+    }
 
-        	fire(3);  // Dispara com força máxima contra o inimigo
+    // Comportamento quando um inimigo é escaneado
+    public void onScannedRobot(ScannedRobotEvent e) {
+        // Verifica a distância do inimigo
+			double enemyBearing = getHeading() + e.getBearing(); // Direção do inimigo
+			double enemyDistance = e.getDistance(); // Distância até o inimigo
+			double myHeading = getHeading(); // Direção atual do robô
 
-        	// Caso o inimigo seja eliminado ou não esteja mais perto
-        	if (enemyDistance > 10) {
-            	aggressiveMode = false;  // Desativa o modo agressivo
-        	}
-    	} else {
-        	// Estratégia normal (perseguir ou fugir)
-        	double turnToEnemy = Utils.normalRelativeAngleDegrees(enemyBearing - myHeading);
-        	setTurnRight(turnToEnemy);  // Gira o robô para alinhar com o inimigo
+			// Gira o robô para alinhar com o inimigo
+			double turnToEnemy = Utils.normalRelativeAngleDegrees(enemyBearing - myHeading);
+			setTurnRight(turnToEnemy);  // Gira o corpo
+			setTurnGunRight(Utils.normalRelativeAngleDegrees(enemyBearing - getGunHeading()));  // Gira a arma
 
-        	// Gira a arma para apontar diretamente para o inimigo
-        	setTurnGunRight(Utils.normalRelativeAngleDegrees(enemyBearing - getGunHeading()));
+			// Move-se em direção ao inimigo
+			setAhead(enemyDistance - 50); // Avança em direção ao inimigo
 
-        	// Evitar bater nas bordas da arena
-        	if (getX() < 50 || getX() > getBattleFieldWidth() - 50 || getY() < 50 || getY() > getBattleFieldHeight() - 50) {
-            	// Se estiver perto das bordas, gira para desviar
-            	setTurnRight(90);  // Gire para desviar
-            	setAhead(100); 	// Ande para longe da borda
-        	} else {
-            	// Se houver menos de 3 robôs, ataque
-            	if (robotCount <= 2) {
-                	setAhead(enemyDistance - 50);  // Avança para ficar mais próximo do inimigo
+			// Atira de acordo com a distância
+			if (enemyDistance < 50) {
+				fire(3); // Dispara com força máxima quando perto
+			} else {
+				fire(1); // Dispara com menos força quando distante
+			}
+    }
 
-                	// Atira dependendo da distância
-                	if (enemyDistance < 200) {
-                    	fire(3);  // Dispara com força máxima quando perto
-                	} else {
-                    	fire(1);  // Dispara com menos força quando longe
-                	}
-            	} else {
-                	// Fugir quando houver mais de 2 inimigos
-                	setBack(100);  // Afasta-se
-                	fire(1);  // Atira apenas uma vez para se defender
-            	}
-        	}
-    	}
-	}
+    // Comportamento quando o robô é atingido por uma bala (somente em modo agressivo)
+    public void onHitByBullet(HitByBulletEvent e) {
+        if (aggressiveMode) {
+            double bulletBearing = e.getBearing(); // Direção da bala
+            double escapeAngle = bulletBearing + 180; // Direção oposta ao disparo
+            escapeAngle = Utils.normalRelativeAngleDegrees(escapeAngle); // Normaliza o ângulo
+
+            // Move-se para longe da direção do tiro
+            setTurnRight(escapeAngle);  // Gira o robô para se afastar da direção do tiro
+            setAhead(200);  // Move-se para longe
+            fire(1);  // Atira uma vez para se defender
+        }
+    }
+
+    // Quando o robô colide com outro robô (somente em modo agressivo)
+    public void onHitRobot(HitRobotEvent e) {
+        if (aggressiveMode) {
+            // Se o robô está na frente, move-se para trás
+            if (e.getBearing() > -90 && e.getBearing() < 90) {
+                back(100);
+            } else {
+                ahead(100);
+            }
+        }
+    }
 }
 
