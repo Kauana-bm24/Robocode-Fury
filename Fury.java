@@ -41,7 +41,7 @@ public class Fury extends AdvancedRobot {
     // Estratégia de movimento paralelamente às paredes
     private void moveParallelToWalls() {
         // Calcula a distância até a parede mais próxima
-        double safeDistance = 20;  // Distância mínima segura da parede (ajustável)
+        double safeDistance = 50;  // Distância mínima segura da parede (ajustável)
         double x = getX();
         double y = getY();
 
@@ -82,24 +82,24 @@ public class Fury extends AdvancedRobot {
     // Comportamento quando um inimigo é escaneado
     public void onScannedRobot(ScannedRobotEvent e) {
         // Verifica a distância do inimigo
-			double enemyBearing = getHeading() + e.getBearing(); // Direção do inimigo
-			double enemyDistance = e.getDistance(); // Distância até o inimigo
-			double myHeading = getHeading(); // Direção atual do robô
+        double enemyBearing = getHeading() + e.getBearing(); // Direção do inimigo
+        double enemyDistance = e.getDistance(); // Distância até o inimigo
+        double myHeading = getHeading(); // Direção atual do robô
 
-			// Gira o robô para alinhar com o inimigo
-			double turnToEnemy = Utils.normalRelativeAngleDegrees(enemyBearing - myHeading);
-			setTurnRight(turnToEnemy);  // Gira o corpo
-			setTurnGunRight(Utils.normalRelativeAngleDegrees(enemyBearing - getGunHeading()));  // Gira a arma
+        // Gira o robô para alinhar com o inimigo
+        double turnToEnemy = Utils.normalRelativeAngleDegrees(enemyBearing - myHeading);
+        setTurnRight(turnToEnemy);  // Gira o corpo
+        setTurnGunRight(Utils.normalRelativeAngleDegrees(enemyBearing - getGunHeading()));  // Gira a arma
 
-			// Move-se em direção ao inimigo
-			setAhead(enemyDistance - 50); // Avança em direção ao inimigo
+        // Move-se em direção ao inimigo
+        setAhead(enemyDistance - 50); // Avança em direção ao inimigo
 
-			// Atira de acordo com a distância
-			if (enemyDistance < 50) {
-				fire(3); // Dispara com força máxima quando perto
-			} else {
-				fire(1); // Dispara com menos força quando distante
-			}
+        // Atira de acordo com a distância
+        if (enemyDistance < 200) {
+            fire(3); // Dispara com força máxima quando perto
+        } else {
+            fire(1); // Dispara com menos força quando distante
+        }
     }
 
     // Comportamento quando o robô é atingido por uma bala (somente em modo agressivo)
@@ -127,5 +127,12 @@ public class Fury extends AdvancedRobot {
             }
         }
     }
-}
 
+    // Quando o robô bate na parede, afasta-se
+    public void onHitWall(HitWallEvent e) {
+        // Ao bater na parede, move-se para longe
+        setBack(100);  // Move-se para trás (direção oposta)
+        setTurnRight(180);  // Gira 180° para a direção oposta
+        setAhead(200);  // Move-se para frente, afastando-se da parede
+    }
+}
