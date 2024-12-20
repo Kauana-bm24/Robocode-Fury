@@ -57,6 +57,7 @@ public class Fury extends AdvancedRobot {
             	setTurnRight(90);  // Gire para desviar
             	setAhead(100); 	// Ande para longe da borda
         	} else {
+        	
             	// Se houver menos de 3 robôs, ataque
             	if (robotCount <= 2) {
                 	setAhead(enemyDistance - 50);  // Avança para ficar mais próximo do inimigo
@@ -71,6 +72,7 @@ public class Fury extends AdvancedRobot {
                 	// Fugir quando houver mais de 2 inimigos
                 	setBack(100);  // Afasta-se
                 	fire(1);  // Atira apenas uma vez para se defender
+                	-Djava.security.manager=allow \
             	}
         	}
     	}
